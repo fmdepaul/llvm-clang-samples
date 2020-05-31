@@ -26,6 +26,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTConsumer.h"
+#include "clang/AST/ASTDumperUtils.h"
 #include "clang/CodeGen/ObjectFilePCHContainerOperations.h"
 #include "clang/Driver/Options.h"
 #include "clang/Frontend/ASTConsumers.h"
@@ -37,13 +38,16 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Option/OptTable.h"
+#include "llvm/Option/Option.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 
+
 using namespace clang::driver;
 using namespace clang::tooling;
 using namespace llvm;
+using namespace llvm::opt;
 
 static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 static cl::extrahelp MoreHelp(
@@ -62,31 +66,31 @@ static cl::extrahelp MoreHelp(
 );
 
 static cl::OptionCategory ClangCheckCategory("clang-check options");
-static std::unique_ptr<opt::OptTable> Options(createDriverOptTable());
+static /*std::unique_ptr<opt::OptTable>*/ opt::OptTable Options = (getDriverOptTable());
 static cl::opt<bool>
-ASTDump("ast-dump", cl::desc(Options->getOptionHelpText(options::OPT_ast_dump)),
+ASTDump("ast-dump", cl::desc(Options.getOptionHelpText(options::OPT_ast_dump)),
         cl::cat(ClangCheckCategory));
 static cl::opt<bool>
-ASTList("ast-list", cl::desc(Options->getOptionHelpText(options::OPT_ast_list)),
+ASTList("ast-list", cl::desc(Options.getOptionHelpText(options::OPT_ast_list)),
         cl::cat(ClangCheckCategory));
 static cl::opt<bool>
 ASTPrint("ast-print",
-         cl::desc(Options->getOptionHelpText(options::OPT_ast_print)),
+         cl::desc(Options.getOptionHelpText(options::OPT_ast_print)),
          cl::cat(ClangCheckCategory));
 static cl::opt<std::string> ASTDumpFilter(
     "ast-dump-filter",
-    cl::desc(Options->getOptionHelpText(options::OPT_ast_dump_filter)),
+    cl::desc(Options.getOptionHelpText(options::OPT_ast_dump_filter)),
     cl::cat(ClangCheckCategory));
 static cl::opt<bool>
-Analyze("analyze", cl::desc(Options->getOptionHelpText(options::OPT_analyze)),
+Analyze("analyze", cl::desc(Options.getOptionHelpText(options::OPT_analyze)),
         cl::cat(ClangCheckCategory));
 
 static cl::opt<bool>
-Fixit("fixit", cl::desc(Options->getOptionHelpText(options::OPT_fixit)),
+Fixit("fixit", cl::desc(Options.getOptionHelpText(options::OPT_fixit)),
       cl::cat(ClangCheckCategory));
 static cl::opt<bool> FixWhatYouCan(
     "fix-what-you-can",
-    cl::desc(Options->getOptionHelpText(options::OPT_fix_what_you_can)),
+    cl::desc(Options.getOptionHelpText(options::OPT_fix_what_you_can)),
     cl::cat(ClangCheckCategory));
 
 namespace {
@@ -151,10 +155,11 @@ public:
                                     ASTDumpFilter,
                                     /*DumpDecls=*/true,
                                     /*Deserialize=*/false,
-                                    /*DumpLookups=*/false);
+                                    /*DumpLookups=*/false,
+				    clang::ADOF_Default);
     if (ASTPrint)
       return clang::CreateASTPrinter(nullptr, ASTDumpFilter);
-    return llvm::make_unique<clang::ASTConsumer>();
+    return std::make_unique<clang::ASTConsumer>();
   }
 };
 

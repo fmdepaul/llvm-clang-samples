@@ -16,28 +16,33 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/Pass.h"
+#include "llvm/IR/Function.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
-class AllocaSizeDetect : public BasicBlockPass {
+class AllocaSizeDetect : public FunctionPass {
 public:
-  AllocaSizeDetect() : BasicBlockPass(ID) {}
+   AllocaSizeDetect() : FunctionPass(ID) {}
 
-  virtual bool runOnBasicBlock(BasicBlock &BB) {
-    const DataLayout &DL = BB.getModule()->getDataLayout();
-    for (BasicBlock::iterator II = BB.begin(), II_e = BB.end(); II != II_e;
-         ++II) {
-      // Iterate over each instruction in the BasicBlock. If the instruction
-      // is an alloca, dump its type and query the type's size.
-      if (AllocaInst *Alloca = dyn_cast<AllocaInst>(II)) {
-        Type *AllocType = Alloca->getAllocatedType();
-        AllocType->print(outs());
-        outs() << " size " << DL.getTypeSizeInBits(AllocType) << " bits\n";
+  virtual bool runOnFunction(Function &F /*BasicBlock &BB*/) {
+  
+    for (Function::iterator I = F.begin(), E = F.end(); I != E; ) {
+      BasicBlock *BB = &*I; // Advance over block so we don't traverse new blocks
+      const DataLayout &DL = BB->getModule()->getDataLayout();
+      for (BasicBlock::iterator II = BB->begin(), II_e = BB->end(); II != II_e;
+	   ++II) {
+	// Iterate over each instruction in the BasicBlock. If the instruction
+	// is an alloca, dump its type and query the type's size.
+	if (AllocaInst *Alloca = dyn_cast<AllocaInst>(II)) {
+	  Type *AllocType = Alloca->getAllocatedType();
+	  AllocType->print(outs());
+	  outs() << " size " << DL.getTypeSizeInBits(AllocType) << " bits\n";
+	}
       }
-    }
 
+    }
     // Return false to signal that the basic block was not modified by this
     // pass.
     return false;

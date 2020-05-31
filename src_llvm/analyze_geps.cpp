@@ -29,26 +29,29 @@ template <typename T> static std::string ToString(const T *Obj) {
   return OS.str();
 }
 
-class AnalyzeGEPPass : public BasicBlockPass {
+class AnalyzeGEPPass : public FunctionPass {
 public:
-  AnalyzeGEPPass() : BasicBlockPass(ID) {}
+  AnalyzeGEPPass() : FunctionPass(ID) {}
 
-  virtual bool runOnBasicBlock(BasicBlock &BB) {
-    for (auto II = BB.begin(), II_e = BB.end(); II != II_e; ++II) {
-      if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(II)) {
-        outs() << "Found GEP:\n";
-        // These dumps only work with LLVM built with a special cmake flag
-        // enabling dumps.
-        // GEP->dump();
-        outs() << "  The type is: " << ToString(GEP->getType()) << "\n";
-        outs() << "  The pointer operand is: "
-               << ToString(GEP->getPointerOperand()) << "\n";
-        outs() << "  Indices: ";
-        for (auto Idx = GEP->idx_begin(), IdxE = GEP->idx_end(); Idx != IdxE;
-             ++Idx) {
-          outs() << "[" << ToString(Idx->get()) << "] ";
-        }
-        outs() << "\n";
+  virtual bool runOnFunction(Function &F/*BasicBlock &BB*/) {
+    for (Function::iterator I = F.begin(), E = F.end(); I != E; ) {
+      BasicBlock *BB = &*I; // Advance over block so we don't traverse new blocks
+      for (auto II = BB->begin(), II_e = BB->end(); II != II_e; ++II) {
+	if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(II)) {
+	  outs() << "Found GEP:\n";
+	  // These dumps only work with LLVM built with a special cmake flag
+	  // enabling dumps.
+	  // GEP->dump();
+	  outs() << "  The type is: " << ToString(GEP->getType()) << "\n";
+	  outs() << "  The pointer operand is: "
+		 << ToString(GEP->getPointerOperand()) << "\n";
+	  outs() << "  Indices: ";
+	  for (auto Idx = GEP->idx_begin(), IdxE = GEP->idx_end(); Idx != IdxE;
+	       ++Idx) {
+	    outs() << "[" << ToString(Idx->get()) << "] ";
+	  }
+	  outs() << "\n";
+	}
       }
     }
 
